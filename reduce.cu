@@ -70,7 +70,7 @@ __global__ void reduce_v3(const int rows, const int cols, T *input, T *output)
         const int row_offset = cur_row * cols;
         T *row_ptr = input + row_offset;
         float4 *row_vector_ptr = reinterpret_cast<float4*>(row_ptr);
-        shm[thd] = static_cast<T>(0);
+        shm_ptr[thd] = {0.0f, 0.0f, 0.0f, 0.0f};
         #pragma unroll
         for(int i = thd; i < cols/4; i += block_size)
         {
@@ -159,7 +159,7 @@ __global__ void reduce_v5(const int rows, const int cols, T *input, T *output)
         const int row_offset = cur_row * cols;
         T *row_ptr = input + row_offset;
         const float4 *row_vec_ptr = reinterpret_cast<const float4*>(row_ptr);
-        shm_ptr[thd] = static_cast<float4>(0);
+        shm_ptr[thd] = {0.0f, 0.0f, 0.0f, 0.0f};
         #pragma unroll
         for(int i = thd; i < cols/4; i += block_size)
         {
@@ -179,11 +179,11 @@ __global__ void reduce_v5(const int rows, const int cols, T *input, T *output)
             float4 tmp_val = __shfl_xor_sync(0xFFFFFFFF, sum_thread, offset);
             sum_thread.x += tmp_val.x;
             sum_thread.y += tmp_val.y;
-            sum_thread.w += tmp_val.w;
-            sum_thread.z += tmp_val.z;    
+            sum_thread.z += tmp_val.z;
+            sum_thread.w += tmp_val.w;    
         }
         if(lain_id == 0) shm_ptr[warp_id] = sum_thread;
-        float4 sum_block = static_cast<T>(0);
+        float4 sum_block = {0.0f, 0.0f, 0.0f, 0.0f};
         if(thd == 0)
         {
             #pragma unroll
@@ -285,8 +285,8 @@ struct MultiFetchVector
         {
             dst[i].x = static_cast<T>(src[i].x);
             dst[i].y = static_cast<T>(src[i].y);
-            dst[i].w = static_cast<T>(src[i].w);
             dst[i].z = static_cast<T>(src[i].z);
+            dst[i].w = static_cast<T>(src[i].w);
         }
     }
 };
@@ -335,7 +335,7 @@ __global__ void reduce_v7(const int rows, const int cols, T *input, T *output)
         T *row_ptr = input + cur_row * N;
         float4 * row_vec_ptr = reinterpret_cast<float4 *const>(row_ptr);
 
-        float4 sum_thread = static_cast<float4>(0);
+        float4 sum_thread = {0.0, 0.0, 0.0, 0.0};
         #pragma unroll
         for(int page_id = 0; page_id < page_num; page_id++)
         {
@@ -348,8 +348,8 @@ __global__ void reduce_v7(const int rows, const int cols, T *input, T *output)
                 {
                     sum_thread.x += buff[i].x;
                     sum_thread.y += buff[i].y;
-                    sum_thread.w += buff[i].w;
                     sum_thread.z += buff[i].z;
+                    sum_thread.w += buff[i].w;
                 }
             }
         }
@@ -366,8 +366,8 @@ __global__ void reduce_v7(const int rows, const int cols, T *input, T *output)
             {
                 sum_block.x += shm[i].x;
                 sum_block.y += shm[i].y;
-                sum_block.w += shm[i].w;
                 sum_block.z += shm[i].z;
+                sum_block.w += shm[i].w;
             }
 
             output[cur_row] = (sum_block.x + sum_block.y) + (sum_block.w + sum_block.z);
